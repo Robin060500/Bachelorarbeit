@@ -4,19 +4,12 @@
 int main() {
   string mant;
   string expo;
-  cout << "Bitte nennen sind Sie erst die Anzahl an Bits, die Sie fuer den Exponenten und dann für die Mantisse verwenden wollen" << endl;
+  cout << "Bitte nennen sind Sie erst die Anzahl an Bits, die Sie fuer den Exponenten und dann fÃ¼r die Mantisse verwenden wollen" << endl;
   cin >> expo >> mant ;
-  cout << mant << " " << expo << endl;
   if (expo == "" || mant == "") {
-    cout << "Bitte schreiben sie genau einen Typen hinter den Aufruf (Float16, "
-            "Float32...!\n";
+    cout << "Bitte schreiben Sie die Zahlen wie folgt auf 5 5 auf.\n";
     return 0;
   }
-  /*if (typ != "Float16" && typ != "Float32" && typ != "Float64" &&
-      typ != "Bfloat16") {
-    cout << "No valid datatyp!";
-    return 0;
-  }*/
   for (int i = 0; i < 1; i++) {
 
     start(expo,mant);    
@@ -24,3 +17,4 @@ int main() {
   }
   return 0;
 }
+

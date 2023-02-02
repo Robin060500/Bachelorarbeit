@@ -140,7 +140,15 @@ void start(string expo, string mant) {
 	for (int m = mantis_bit + 7 - expo_bit; m > 0; m--) {
 		expo_diff = expo_diff + "0";
 	}
-	write << "(assert (= expo_diff_long (concat " << expo_diff << " expo_diff_2)))" << endl;
+	if (mantis_bit + 7 > expo_bit) {
+		write << "(assert (= expo_diff_long (concat " << expo_diff << " expo_diff_2)))" << endl;
+	}
+	else if (mantis_bit + 7 == expo_bit) {
+		write << "(assert (= expo_diff_long exp_diff_2))" << endl;
+	} 
+	else {
+		write << "(assert (= expo_diff_long ((_ extract " <<  mantis_bit + 6<< " 0) expo_diff_2))) " << endl;
+	}
 
 	write << endl;
 	//shift the smaller mantissa
@@ -398,7 +406,15 @@ void start(string expo, string mant) {
 	for (int m = mantis_bit + 7 - expo_bit; m > 0; m--) {
 		expo_diff2 = expo_diff2 + "0";
 	}
-	write << "(assert (= expo_diff_long_2 (concat " << expo_diff2 << " expo_diff2_2)))" << endl;
+	if (mantis_bit + 7 > expo_bit) {
+		write << "(assert (= expo_diff_long_2 (concat " << expo_diff2 << " expo_diff2_2)))" << endl;
+	}
+	else if (mantis_bit + 7 == expo_bit) {
+		write << "(assert (= expo_diff_long_2 exp_diff2_2))" << endl;
+	}
+	else {
+		write << "(assert (= expo_diff_long_2 ((_ extract " << mantis_bit + 6 << " 0) expo_diff2_2))) " << endl;
+	}
 
 	write << endl;
 	//shift the smaller mantissa

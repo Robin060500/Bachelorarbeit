@@ -21,8 +21,10 @@ void start(string expo, string mant) {
 	write << endl;
 	//set the variables
 	write << ";;;set the variables" << endl;
-	write << "(declare-fun x () (_ BitVec " << length << " ))" << endl;
-	write << "(declare-fun y () (_ BitVec " << length << " ))" << endl;
+	write << "(declare-fun x () (_ BitVec " << length - 6 << " ))" << endl;
+	write << "(declare-fun y () (_ BitVec " << length - 6 << " ))" << endl;
+	write << "(declare-fun x_use () (_ BitVec " << length << " ))" << endl;
+	write << "(declare-fun y_use () (_ BitVec " << length << " ))" << endl;
 	write << "(declare-fun x_sign () (_ BitVec 1))" << endl;
 	write << "(declare-fun y_sign () (_ BitVec 1))" << endl;
 	write << "(declare-fun x_expo () (_ BitVec " << expo_bit << " ))" << endl;
@@ -43,6 +45,7 @@ void start(string expo, string mant) {
 	write << "(declare-fun mant_up () (_ BitVec " << mantis_bit + 7 << " ))" << endl;
 	write << "(declare-fun mant_short () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
 	write << "(declare-fun other_mant () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
+	write << "(declare-fun other_man () (_ BitVec " << mantis_bit + 7 << " ))" << endl;
 	write << "(declare-fun z_mant_over () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
 	write << "(declare-fun z_mant_good () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
 	write << "(declare-fun z_mant_good2 () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
@@ -96,14 +99,20 @@ void start(string expo, string mant) {
 	write << ";;;(assert (= y #b" << bin_num2 << "))" << endl;
 
 	write << endl;
+	//add the 6 zeros
+	write << ";;;add the 6 zeros" << endl;
+	write << "(assert (= x_use (concat x #b000000)))" << endl;
+	write << "(assert (= y_use (concat y #b000000)))" << endl;
+
+	write << endl;
 	//extract sign mantissa expo
 	write << ";;;extract sign mantissa expo" << endl;
-	write << "(assert (= x_sign ((_ extract " << length - 1 << " " << length - 1 << ") x)))" << endl;
-	write << "(assert (= y_sign ((_ extract " << length - 1 << " " << length - 1 << ") y)))" << endl;
-	write << "(assert (= x_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") x)))" << endl;
-	write << "(assert (= y_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") y)))" << endl;
-	write << "(assert (= x_man ((_ extract " << mantis_bit + 5 << " 0) x)))" << endl;
-	write << "(assert (= y_man ((_ extract " << mantis_bit + 5 << " 0) y)))" << endl;
+	write << "(assert (= x_sign ((_ extract " << length - 1 << " " << length - 1 << ") x_use)))" << endl;
+	write << "(assert (= y_sign ((_ extract " << length - 1 << " " << length - 1 << ") y_use)))" << endl;
+	write << "(assert (= x_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") x_use)))" << endl;
+	write << "(assert (= y_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") y_use)))" << endl;
+	write << "(assert (= x_man ((_ extract " << mantis_bit + 5 << " 0) x_use)))" << endl;
+	write << "(assert (= y_man ((_ extract " << mantis_bit + 5 << " 0) y_use)))" << endl;
 	
 	write << endl;
 	//check vor nan and inf
@@ -149,11 +158,17 @@ void start(string expo, string mant) {
 	else {
 		write << "(assert (= expo_diff_long ((_ extract " <<  mantis_bit + 6<< " 0) expo_diff_2))) " << endl;
 	}
+	
 
 	write << endl;
 	//shift the smaller mantissa
 	write << ";;;shift the smaller mantissa" << endl;
-	write << "(assert (ite (bvuge x_expo y_expo) (= mant (bvlshr y_mant expo_diff_long)) (= mant (bvlshr x_mant expo_diff_long))))" << endl;
+	write << "(assert (ite (bvuge x_expo y_expo) (ite (= x_expo y_expo) (ite (bvuge x_man y_man)";
+	write << "(and (= mant y_mant) (= other_man x_mant)) (and (= mant x_mant) (= other_man y_mant)))";
+	write << "(and (= mant(bvlshr y_mant expo_diff_long)) (= other_man x_mant)))";
+	write << "(and (= mant(bvlshr x_mant expo_diff_long)) (= other_man y_mant))))" << endl;
+
+
 	write << "(assert (= lsb2 ((_ extract 3 3) mant)))" << endl;
 	write << "(assert (= g2 ((_ extract 2 2) mant)))" << endl;
 	write << "(assert (= r2 ((_ extract 1 1) mant)))" << endl;
@@ -171,9 +186,9 @@ void start(string expo, string mant) {
 
 	//shorten mant 3 bits
 	write << ";;;shorten the mant by 3 bits" << endl;
-	write << "(assert (ite (bvuge x_expo y_expo) (= other_mant ((_ extract " << mantis_bit + 6 << " 3)";
-	write << " x_mant)) (= other_mant ((_ extract " << mantis_bit + 6 << " 3) y_mant))))" << endl;
-	write << "(assert (= mant_short ((_ extract " << mantis_bit + 6 << " 3) mant_up)))" << endl;
+	write << "(assert (and (= other_mant ((_ extract " << mantis_bit + 6 << " 3)";
+	write << " other_man)) (= mant_short ((_ extract " << mantis_bit + 6 << " 3) mant_up))))" << endl;
+
 
 	write << endl;
 	//decide add or sub
@@ -251,7 +266,13 @@ void start(string expo, string mant) {
 	write << endl;
 	//decide the sign
 	write << ";;;decide the sign" << endl;
-	write << "(assert (ite (bvuge x_expo y_expo) (= z_sign x_sign) (= z_sign y_sign)))" << endl;
+	string n10 = "#b";
+	for (int m = 0; m < mantis_bit; m++) {
+		n10 = n10 + "0";
+	}
+	write << "(assert (ite (and (= nan #b0) (and (= inf #b0) (and (= overflow2 #b0) (and (= underflow1 #b0) (not (= z_mant_final "<< n10 <<"))))))";
+	write << "(ite(bvuge x_expo y_expo) (ite(= x_expo y_expo) (ite(bvuge x_man y_man)";
+	write << "(= z_sign x_sign) (= z_sign y_sign))(= z_sign x_sign))(= z_sign y_sign))(= z_sign #b0)))" << endl;
 
 	write << endl;
 	//put all together
@@ -280,7 +301,7 @@ void start(string expo, string mant) {
 	write << "(= z_short " << n5_str << "))";
 	write << "(= z_short " << n6_str << ")))" << endl;
 
-	write << "(assert (ite (bvuge x_expo y_expo) (= z (concat x_sign z_short)) (= z (concat y_sign z_short))))" << endl;
+	write << "(assert (= z (concat z_sign z_short)))" << endl;
 
 	
 
@@ -290,8 +311,10 @@ void start(string expo, string mant) {
 	write << endl;
 	//set the second variables
 	write << ";;;set the variables" << endl;
-	write << "(declare-fun a () (_ BitVec " << length << " ))" << endl;
-	write << "(declare-fun b () (_ BitVec " << length << " ))" << endl;
+	write << "(declare-fun a () (_ BitVec " << length - 6 << " ))" << endl;
+	write << "(declare-fun b () (_ BitVec " << length - 6 << " ))" << endl;
+	write << "(declare-fun a_use () (_ BitVec " << length << " ))" << endl;
+	write << "(declare-fun b_use () (_ BitVec " << length << " ))" << endl;
 	write << "(declare-fun a_sign () (_ BitVec 1))" << endl;
 	write << "(declare-fun b_sign () (_ BitVec 1))" << endl;
 	write << "(declare-fun a_expo () (_ BitVec " << expo_bit << " ))" << endl;
@@ -312,6 +335,7 @@ void start(string expo, string mant) {
 	write << "(declare-fun mant_up_2 () (_ BitVec " << mantis_bit + 7 << " ))" << endl;
 	write << "(declare-fun mant_short_2 () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
 	write << "(declare-fun other_mant_2 () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
+	write << "(declare-fun other_man_2 () (_ BitVec " << mantis_bit + 7 << " ))" << endl;
 	write << "(declare-fun c_mant_over () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
 	write << "(declare-fun c_mant_good () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
 	write << "(declare-fun c_mant_good2 () (_ BitVec " << mantis_bit + 4 << " ))" << endl;
@@ -361,14 +385,20 @@ void start(string expo, string mant) {
 	write << ";;;(assert (= b #b" << bin_num2 << "))" << endl;
 
 	write << endl;
+	//add the 6 zeros
+	write << ";;;add the 6 zeros" << endl;
+	write << "(assert (= a_use (concat a #b000000)))" << endl;
+	write << "(assert (= b_use (concat b #b000000)))" << endl;
+
+	write << endl;
 	//extract sign mantissa expo
 	write << ";;;extract sign mantissa expo" << endl;
-	write << "(assert (= a_sign ((_ extract " << length - 1 << " " << length - 1 << ") a)))" << endl;
-	write << "(assert (= b_sign ((_ extract " << length - 1 << " " << length - 1 << ") b)))" << endl;
-	write << "(assert (= a_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") a)))" << endl;
-	write << "(assert (= b_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") b)))" << endl;
-	write << "(assert (= a_man ((_ extract " << mantis_bit + 5 << " 0) a)))" << endl;
-	write << "(assert (= b_man ((_ extract " << mantis_bit + 5 << " 0) b)))" << endl;
+	write << "(assert (= a_sign ((_ extract " << length - 1 << " " << length - 1 << ") a_use)))" << endl;
+	write << "(assert (= b_sign ((_ extract " << length - 1 << " " << length - 1 << ") b_use)))" << endl;
+	write << "(assert (= a_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") a_use)))" << endl;
+	write << "(assert (= b_expo ((_ extract " << length - 2 << " " << length - 1 - expo_bit << ") b_use)))" << endl;
+	write << "(assert (= a_man ((_ extract " << mantis_bit + 5 << " 0) a_use)))" << endl;
+	write << "(assert (= b_man ((_ extract " << mantis_bit + 5 << " 0) b_use)))" << endl;
 
 	write << endl;
 	//check vor nan and inf
@@ -406,6 +436,8 @@ void start(string expo, string mant) {
 	for (int m = mantis_bit + 7 - expo_bit; m > 0; m--) {
 		expo_diff2 = expo_diff2 + "0";
 	}
+	//write << "(assert (= expo_diff_long_2 (concat " << expo_diff2 << " expo_diff2_2)))" << endl;
+
 	if (mantis_bit + 7 > expo_bit) {
 		write << "(assert (= expo_diff_long_2 (concat " << expo_diff2 << " expo_diff2_2)))" << endl;
 	}
@@ -416,10 +448,16 @@ void start(string expo, string mant) {
 		write << "(assert (= expo_diff_long_2 ((_ extract " << mantis_bit + 6 << " 0) expo_diff2_2))) " << endl;
 	}
 
+
 	write << endl;
 	//shift the smaller mantissa
 	write << ";;;shift the smaller mantissa" << endl;
-	write << "(assert (ite (bvuge a_expo b_expo) (= mant_2 (bvlshr b_mant expo_diff_long_2)) (= mant_2 (bvlshr a_mant expo_diff_long_2))))" << endl;
+	write << "(assert (ite (bvuge a_expo b_expo) (ite (= a_expo b_expo) (ite (bvuge a_man b_man)";
+	write << "(and (= mant_2 b_mant) (= other_man_2 a_mant)) (and (= mant_2 a_mant) (= other_man_2 b_mant)))";
+	write << "(and (= mant_2(bvlshr b_mant expo_diff_long_2)) (= other_man_2 a_mant)))";
+	write << "(and (= mant_2(bvlshr a_mant expo_diff_long_2)) (= other_man_2 b_mant))))" << endl;
+
+
 	write << "(assert (= lsb4 ((_ extract 3 3) mant_2)))" << endl;
 	write << "(assert (= g4 ((_ extract 2 2) mant_2)))" << endl;
 	write << "(assert (= r4 ((_ extract 1 1) mant_2)))" << endl;
@@ -437,9 +475,8 @@ void start(string expo, string mant) {
 
 	//shorten mant 3 bits
 	write << ";;;shorten the mant by 3 bits" << endl;
-	write << "(assert (ite (bvuge a_expo b_expo) (= other_mant_2 ((_ extract " << mantis_bit + 6 << " 3)";
-	write << " a_mant)) (= other_mant_2 ((_ extract " << mantis_bit + 6 << " 3) b_mant))))" << endl;
-	write << "(assert (= mant_short_2 ((_ extract " << mantis_bit + 6 << " 3) mant_up_2)))" << endl;
+	write << "(assert (and (= other_mant_2 ((_ extract " << mantis_bit + 6 << " 3)";
+	write << " other_man_2)) (= mant_short_2 ((_ extract " << mantis_bit + 6 << " 3) mant_up_2))))" << endl;
 
 	write << endl;
 	//decide add or sub
@@ -517,7 +554,9 @@ void start(string expo, string mant) {
 	write << endl;
 	//decide the sign
 	write << ";;;decide the sign" << endl;
-	write << "(assert (ite (bvuge a_expo b_expo) (= c_sign a_sign) (= c_sign b_sign)))" << endl;
+	write << "(assert (ite (and (= nan_2 #b0) (and (= inf_2 #b0) (and (= overflow2_2 #b0) (and (= underflow1_2 #b0) (not (= c_mant_final " << n10 << "))))))";
+	write << "(ite(bvuge a_expo b_expo) (ite(= a_expo b_expo) (ite(bvuge a_man b_man)";
+	write << "(= c_sign a_sign) (= c_sign b_sign))(= c_sign a_sign))(= c_sign b_sign))(= c_sign #b0)))" << endl;
 
 	write << endl;
 	//put all together
@@ -546,7 +585,7 @@ void start(string expo, string mant) {
 	write << "(= c_short " << n5_str_2 << "))";
 	write << "(= c_short " << n6_str_2 << ")))" << endl;
 
-	write << "(assert (ite (bvuge a_expo b_expo) (= c (concat a_sign c_short)) (= c (concat b_sign c_short))))" << endl;
+	write << "(assert (= c (concat c_sign c_short)))" << endl;
 
 	write << endl;
 	//finish
@@ -584,7 +623,7 @@ string num_gen_str(string bin_num, int type) {
 			bin_num = bin_num + "0";
 		}
 	}
-	bin_num = bin_num + "000000";
+	//bin_num = bin_num + "000000";
 	return bin_num;
 }
 
